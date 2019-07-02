@@ -1,6 +1,6 @@
 //
-//  MMapable.swift
-//  Storage
+//  MMapItem.swift
+//  MMapKV
 //
 //  Created by Valo on 2019/6/26.
 //

@@ -1,3 +1,10 @@
+//
+//  MMapFile.swift
+//  MMapKV
+//
+//  Created by Valo on 2019/6/26.
+//
+
 import Foundation
 
 public final class MMapFile {
