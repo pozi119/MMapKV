@@ -12,24 +12,27 @@ public class MMapKV {
     private var dictionary: [String: MMapable] = [:]
     private var mmapfile: MMapFile
     private var dataSize: Int = 0
-    
+
     private var crc: Bool
     private var crcfile: MMapFile?
     private var crcdigest: uLong = 0
 
     private(set) var id: String
 
-    public init(_ id: String = "com.enigma.mmapkv", crc: Bool = true) {
+    public init(_ id: String = "com.enigma.mmapkv", directory: String = "", crc: Bool = true) {
         // dir
-        let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
-        let dir = (documentDirectory as NSString).appendingPathComponent("MMapKV")
+        var dir = directory
+        if dir.count == 0 {
+            let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+            dir = (documentDirectory as NSString).appendingPathComponent("MMapKV")
+        }
         let fm = FileManager.default
         var isdir: ObjCBool = false
         let exist = fm.fileExists(atPath: dir, isDirectory: &isdir)
         if !exist || !isdir.boolValue {
             try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
         }
-        
+
         // mmap file
         let path = (dir as NSString).appendingPathComponent(id)
         mmapfile = MMapFile(path: path)
@@ -52,18 +55,18 @@ public class MMapKV {
         guard calculated_crc == stored_crc else {
             fatalError("check crc [\(id)] fail, claculated:\(calculated_crc), stored:\(stored_crc)\n")
         }
-        self.crcdigest = calculated_crc
+        crcdigest = calculated_crc
     }
-    
+
     func updateCRC() {
         guard crc && crcfile != nil else { return }
-        
+
         // calculate
         let buf = mmapfile.memory.assumingMemoryBound(to: Bytef.self)
         var crc: uLong = 0
         crc = crc32(crc, buf, uInt(dataSize))
-        self.crcdigest = crc
-        
+        crcdigest = crc
+
         // store
         let size = MemoryLayout<uLong>.size
         let rbuf = UnsafeRawPointer(&crc)
