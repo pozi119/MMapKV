@@ -9,7 +9,7 @@ import Foundation
 import zlib
 
 public class MMapKV {
-    private var dictionary: [String: MMapable] = [:]
+    private var dictionary: [String: MMapable?] = [:]
     private var mmapfile: MMapFile
     private var dataSize: Int = 0
 
@@ -75,7 +75,7 @@ public class MMapKV {
 
     public subscript(key: String) -> MMapable? {
         get {
-            return dictionary[key]
+            return dictionary[key] ?? nil
         }
         set(newValue) {
             dictionary[key] = newValue

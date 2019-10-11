@@ -169,9 +169,9 @@ public struct MMapItem {
         storage = keyTuple.index + valTuple.index + keyTuple.bytes + valTuple.bytes
     }
 
-    public static func enumerate(_ buffer: [UInt8]) -> (kv: [String: MMapable], size: Int) {
+    public static func enumerate(_ buffer: [UInt8]) -> (kv: [String: MMapable?], size: Int) {
         var offset: Int = 0
-        var results: [String: MMapable] = [:]
+        var results: [String: MMapable?] = [:]
 
         let size = buffer.count
         while offset < size {
