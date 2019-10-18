@@ -8,8 +8,9 @@
 import Foundation
 import zlib
 
-public class MMapKV {
-    public private(set) var dictionary: [String: MMapable] = [:]
+public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable {
+    public private(set) var dictionary: [Key: Value] = [:]
+
     private var mmapfile: MMapFile
     private var dataSize: Int = 0
 
@@ -19,7 +20,9 @@ public class MMapKV {
 
     private(set) var id: String
 
-    public init(_ id: String = "com.enigma.mmapkv", directory: String = "", crc: Bool = true) {
+    public init(_ id: String = "com.enigma.mmapkv",
+                directory: String = "",
+                crc: Bool = true) {
         // dir
         var dir = directory
         if dir.count == 0 {
@@ -37,14 +40,12 @@ public class MMapKV {
         let path = (dir as NSString).appendingPathComponent(id)
         mmapfile = MMapFile(path: path)
         let bytes = [UInt8](Data(bytes: mmapfile.memory, count: mmapfile.size))
-        let meta = MMapItem.enumerate(bytes)
-        dictionary = meta.kv
-        dataSize = meta.size
+        (dictionary, dataSize) = MMapKV.decode(bytes)
         self.id = id
         self.crc = crc
 
         // crc
-        guard crc else { return }
+        guard crc && dictionary.count > 0 else { return }
         let crcName = (id as NSString).appendingPathExtension("crc") ?? (id + ".crc")
         let crcPath = (dir as NSString).appendingPathComponent(crcName)
         crcfile = MMapFile(path: crcPath)
@@ -53,12 +54,13 @@ public class MMapKV {
         calculated_crc = crc32(calculated_crc, buf, uInt(dataSize))
         let stored_crc = crcfile!.memory.load(as: uLong.self)
         guard calculated_crc == stored_crc else {
+            updateCRC()
             fatalError("check crc [\(id)] fail, claculated:\(calculated_crc), stored:\(stored_crc)\n")
         }
         crcdigest = calculated_crc
     }
 
-    func updateCRC() {
+    private func updateCRC() {
         guard crc && crcfile != nil else { return }
 
         // calculate
@@ -71,17 +73,6 @@ public class MMapKV {
         let size = MemoryLayout<uLong>.size
         let rbuf = UnsafeRawPointer(&crc)
         crcfile!.write(at: 0 ..< size, from: rbuf)
-    }
-
-    public subscript(key: String) -> MMapable? {
-        get {
-            return dictionary[key]
-        }
-        set(newValue) {
-            dictionary[key] = newValue
-            let mmaped = MMapItem(key: key, value: newValue)
-            append(mmaped.storage)
-        }
     }
 
     private func append(_ bytes: [UInt8]) {
@@ -102,6 +93,97 @@ public class MMapKV {
         dataSize = 0
         for (key, value) in dictionary {
             self[key] = value
+        }
+    }
+}
+
+private let MMapKeyFlag: [UInt8] = [0x4B, 0x45, 0x59]
+private let MMapValueFlag: [UInt8] = [0x56, 0x41, 0x4C]
+private let MMapEncoder = JSONEncoder()
+private let MMapDecoder = JSONDecoder()
+
+extension MMapKV {
+    static func encode(_ element: (Key, Value?)) -> [UInt8] {
+        guard let keyData = try? MMapEncoder.encode(element.0) else {
+            return []
+        }
+        let keyBytes = [UInt8](keyData)
+        var valueBytes = [UInt8]()
+        if let valueData = try? MMapEncoder.encode(element.1) {
+            valueBytes = [UInt8](valueData)
+        }
+
+        func sizeBytes(of bytes: [UInt8]) -> [UInt8] {
+            let size = bytes.count
+            var sizeBytes = [UInt8]()
+            for i in 0 ..< 4 {
+                sizeBytes.append(UInt8(size >> (i * 8)))
+            }
+            return sizeBytes
+        }
+
+        let keySizeBytes = sizeBytes(of: keyBytes)
+        let valueSizeBytes = sizeBytes(of: valueBytes)
+
+        var bytes = MMapKeyFlag + keySizeBytes + keyBytes
+        bytes += MMapValueFlag + valueSizeBytes + valueBytes
+        return bytes
+    }
+
+    static func decode(_ bytes: [UInt8]) -> ([Key: Value], Int) {
+        var offset: Int = 0
+        var results: [Key: Value] = [:]
+        let total = bytes.count
+
+        func parse<T: Codable>(type: T.Type, flag: [UInt8]) -> (T?, Int) {
+            var start = offset
+            var end = start + 3
+            guard end <= total else { return (nil, offset) }
+            var buf = [UInt8](bytes[start ..< end])
+            if buf != flag { return (nil, offset) }
+
+            start = end
+            end = start + 4
+            guard end <= total else { return (nil, offset) }
+            buf = [UInt8](bytes[start ..< end])
+            var size = 0
+            for i in 0 ..< 4 {
+                size |= Int(buf[i]) << (i * 8)
+            }
+
+            start = end
+            end = start + size
+            guard end <= total else { return (nil, offset) }
+            buf = [UInt8](bytes[start ..< end])
+            let r = try? MMapDecoder.decode(T.self, from: Data(buf))
+            return (r, end)
+        }
+
+        while offset < total {
+            let (key, key_end) = parse(type: Key.self, flag: MMapKeyFlag)
+            if key == nil { break }
+
+            offset = key_end
+            let (val, val_end) = parse(type: Value.self, flag: MMapValueFlag)
+            if offset == val_end { break }
+
+            results[key!] = val
+            offset = val_end
+        }
+
+        return (results, offset)
+    }
+}
+
+extension MMapKV {
+    public subscript(key: Key) -> Value? {
+        get {
+            return dictionary[key]
+        }
+        set(newValue) {
+            dictionary[key] = newValue
+            let mmaped = MMapKV.encode((key, newValue))
+            append(mmaped)
         }
     }
 }
