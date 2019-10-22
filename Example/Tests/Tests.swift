@@ -2,9 +2,7 @@ import MMapKV
 import XCTest
 
 class Tests: XCTestCase {
-    lazy var mmapkv: MMapKV<String, Int> = {
-        MMapKV()
-    }()
+    lazy var mmkv = MMKV<String, Int>()
 
     override func setUp() {
         super.setUp()
@@ -19,30 +17,43 @@ class Tests: XCTestCase {
     func testWrite() {
         // This is an example of a functional test case.
         XCTAssert(true, "Pass")
-        mmapkv["b"] = 0
-        mmapkv["i"] = -1
-        mmapkv["i8"] = -8
-        mmapkv["i16"] = -16
-        mmapkv["i32"] = -32
-        mmapkv["i64"] = -64
-        mmapkv["u"] = 1
-        mmapkv["u8"] = 8
-        mmapkv["u16"] = 16
-        mmapkv["u32"] = 32
-        mmapkv["u64"] = 64
-        mmapkv["f"] = 11
-        mmapkv["d"] = 22
-        mmapkv["f80"] = 80
-        mmapkv["str"] = 1000
-        mmapkv["max"] = Int.min
-        mmapkv["min"] = Int.max
+        mmkv["b"] = 0
+        mmkv["i"] = -1
+        mmkv["i8"] = -8
+        mmkv["i16"] = -16
+        mmkv["i32"] = -32
+        mmkv["i64"] = -64
+        mmkv["u"] = 1
+        mmkv["u8"] = 8
+        mmkv["u16"] = 16
+        mmkv["u32"] = 32
+        mmkv["u64"] = 64
+        mmkv["f"] = 11
+        mmkv["d"] = 22
+        mmkv["f80"] = 80
+        mmkv["str"] = 1000
+        mmkv["max"] = Int.min
+        mmkv["min"] = Int.max
     }
 
     func testRead() {
-        let a = mmapkv["i"]
-        let b = mmapkv["max"]
-        let c = mmapkv["min"]
-        print("\(String(describing: a)), \(String(describing: b)), \(String(describing: c))")
+        XCTAssert(mmkv["b"] == 0)
+        XCTAssert(mmkv["i"] == -1)
+        XCTAssert(mmkv["i8"] == -8)
+        XCTAssert(mmkv["i16"] == -16)
+        XCTAssert(mmkv["i32"] == -32)
+        XCTAssert(mmkv["i64"] == -64)
+        XCTAssert(mmkv["u"] == 1)
+        XCTAssert(mmkv["u8"] == 8)
+        XCTAssert(mmkv["u16"] == 16)
+        XCTAssert(mmkv["u32"] == 32)
+        XCTAssert(mmkv["u64"] == 64)
+        XCTAssert(mmkv["f"] == 11)
+        XCTAssert(mmkv["d"] == 22)
+        XCTAssert(mmkv["f80"] == 80)
+        XCTAssert(mmkv["str"] == 1000)
+        XCTAssert(mmkv["max"] == Int.min)
+        XCTAssert(mmkv["min"] == Int.max)
     }
 
     func testPerformanceExample() {

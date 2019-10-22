@@ -1,6 +1,6 @@
 //
-//  MMapKV.swift
-//  MMapKV
+//  MMKV.swift
+//  MMKV
 //
 //  Created by Valo on 2019/6/26.
 //
@@ -8,26 +8,26 @@
 import Foundation
 import zlib
 
-public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable {
+public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable {
     public private(set) var dictionary: [Key: Value] = [:]
 
-    private var mmapfile: MMapFile
+    private var mmkvfile: MMKVFile
     private var dataSize: Int = 0
 
     private var crc: Bool
-    private var crcfile: MMapFile?
+    private var crcfile: MMKVFile?
     private var crcdigest: uLong = 0
 
     private(set) var id: String
 
-    public init(_ id: String = "com.enigma.mmapkv",
+    public init(_ id: String = "com.enigma.mmkv",
                 directory: String = "",
                 crc: Bool = true) {
         // dir
         var dir = directory
         if dir.count == 0 {
             let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
-            dir = (documentDirectory as NSString).appendingPathComponent("MMapKV")
+            dir = (documentDirectory as NSString).appendingPathComponent("MMKV")
         }
         let fm = FileManager.default
         var isdir: ObjCBool = false
@@ -38,9 +38,9 @@ public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codabl
 
         // mmap file
         let path = (dir as NSString).appendingPathComponent(id)
-        mmapfile = MMapFile(path: path)
-        let bytes = [UInt8](Data(bytes: mmapfile.memory, count: mmapfile.size))
-        (dictionary, dataSize) = MMapKV.decode(bytes)
+        mmkvfile = MMKVFile(path: path)
+        let bytes = [UInt8](Data(bytes: mmkvfile.memory, count: mmkvfile.size))
+        (dictionary, dataSize) = MMKV.decode(bytes)
         self.id = id
         self.crc = crc
 
@@ -48,8 +48,8 @@ public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codabl
         guard crc && dictionary.count > 0 else { return }
         let crcName = (id as NSString).appendingPathExtension("crc") ?? (id + ".crc")
         let crcPath = (dir as NSString).appendingPathComponent(crcName)
-        crcfile = MMapFile(path: crcPath)
-        let buf = mmapfile.memory.assumingMemoryBound(to: Bytef.self)
+        crcfile = MMKVFile(path: crcPath)
+        let buf = mmkvfile.memory.assumingMemoryBound(to: Bytef.self)
         var calculated_crc: uLong = 0
         calculated_crc = crc32(calculated_crc, buf, uInt(dataSize))
         let stored_crc = crcfile!.memory.load(as: uLong.self)
@@ -64,7 +64,7 @@ public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codabl
         guard crc && crcfile != nil else { return }
 
         // calculate
-        let buf = mmapfile.memory.assumingMemoryBound(to: Bytef.self)
+        let buf = mmkvfile.memory.assumingMemoryBound(to: Bytef.self)
         var crc: uLong = 0
         crc = crc32(crc, buf, uInt(dataSize))
         crcdigest = crc
@@ -78,18 +78,18 @@ public class MMapKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codabl
     private func append(_ bytes: [UInt8]) {
         let len = bytes.count
         let end = dataSize + len
-        if end > mmapfile.size {
-            mmapfile.size = end
+        if end > mmkvfile.size {
+            mmkvfile.size = end
             resize()
         }
         let range: Range<Int> = Range(uncheckedBounds: (dataSize, end))
-        mmapfile.write(at: range, from: bytes)
+        mmkvfile.write(at: range, from: bytes)
         dataSize = end
         updateCRC()
     }
 
     public func resize() {
-        mmapfile.clear()
+        mmkvfile.clear()
         dataSize = 0
         for (key, value) in dictionary {
             self[key] = value
@@ -102,7 +102,7 @@ private let MMapValueFlag: [UInt8] = [0x56, 0x41, 0x4C]
 private let MMapEncoder = JSONEncoder()
 private let MMapDecoder = JSONDecoder()
 
-extension MMapKV {
+extension MMKV {
     static func encode(_ element: (Key, Value?)) -> [UInt8] {
         guard let keyData = try? MMapEncoder.encode(element.0) else {
             return []
@@ -175,14 +175,14 @@ extension MMapKV {
     }
 }
 
-extension MMapKV {
+extension MMKV {
     public subscript(key: Key) -> Value? {
         get {
             return dictionary[key]
         }
         set(newValue) {
             dictionary[key] = newValue
-            let mmaped = MMapKV.encode((key, newValue))
+            let mmaped = MMKV.encode((key, newValue))
             append(mmaped)
         }
     }
