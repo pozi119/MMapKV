@@ -45,7 +45,7 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         self.crc = crc
 
         // crc
-        guard crc && dictionary.count > 0 else { return }
+        guard crc else { return }
         let crcName = (id as NSString).appendingPathExtension("crc") ?? (id + ".crc")
         let crcPath = (dir as NSString).appendingPathComponent(crcName)
         crcfile = MMKVFile(path: crcPath)
@@ -55,7 +55,7 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         let stored_crc = crcfile!.memory.load(as: uLong.self)
         guard calculated_crc == stored_crc else {
             updateCRC()
-            fatalError("check crc [\(id)] fail, claculated:\(calculated_crc), stored:\(stored_crc)\n")
+            assert(false, "check crc [\(id)] fail, claculated:\(calculated_crc), stored:\(stored_crc)\n")
         }
         crcdigest = calculated_crc
     }

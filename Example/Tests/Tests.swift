@@ -2,7 +2,7 @@ import MMapKV
 import XCTest
 
 class Tests: XCTestCase {
-    lazy var mmkv = MMKV<String, Int>()
+    lazy var mmkv = MMKV<String, Int>("com.valo.mmkv.int")
 
     override func setUp() {
         super.setUp()
@@ -54,12 +54,5 @@ class Tests: XCTestCase {
         XCTAssert(mmkv["str"] == 1000)
         XCTAssert(mmkv["max"] == Int.min)
         XCTAssert(mmkv["min"] == Int.max)
-    }
-
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        measure {
-            // Put the code you want to measure the time of here.
-        }
     }
 }

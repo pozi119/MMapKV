@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3E48B989235FEA91006C16A3 /* AnyCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E48B988235FEA91006C16A3 /* AnyCodableTests.swift */; };
+		3E48B98B235FFECB006C16A3 /* AnyCodableEx.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E48B98A235FFECB006C16A3 /* AnyCodableEx.swift */; };
+		3E48B98D23600562006C16A3 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E48B98C23600562006C16A3 /* Person.swift */; };
+		3E48B98F236005B5006C16A3 /* CodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E48B98E236005B5006C16A3 /* CodableTests.swift */; };
 		BA0B1642339C85263AB9A673 /* Pods_MMapKV_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34C1B67B18780C11639F7962 /* Pods_MMapKV_Example.framework */; };
 		D17628A33C7F4A6B3EB4406E /* Pods_MMapKV_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AEDB773864A47097C8D9FD5A /* Pods_MMapKV_Tests.framework */; };
 		ED83F67C20348A760038D96B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED83F67B20348A760038D96B /* AppDelegate.swift */; };
@@ -31,6 +35,10 @@
 		1D057C6C1DBBB3B275EAB0F9 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		34C1B67B18780C11639F7962 /* Pods_MMapKV_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MMapKV_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		382AF0678CFF504BA2305A5F /* Pods-MMapKV_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMapKV_Tests.release.xcconfig"; path = "Target Support Files/Pods-MMapKV_Tests/Pods-MMapKV_Tests.release.xcconfig"; sourceTree = "<group>"; };
+		3E48B988235FEA91006C16A3 /* AnyCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableTests.swift; sourceTree = "<group>"; };
+		3E48B98A235FFECB006C16A3 /* AnyCodableEx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableEx.swift; sourceTree = "<group>"; };
+		3E48B98C23600562006C16A3 /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
+		3E48B98E236005B5006C16A3 /* CodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableTests.swift; sourceTree = "<group>"; };
 		5DB371E30D811EC22B4FAF38 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		614836CAA2C86AFF48059739 /* Pods-MMapKV_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MMapKV_Example.release.xcconfig"; path = "Target Support Files/Pods-MMapKV_Example/Pods-MMapKV_Example.release.xcconfig"; sourceTree = "<group>"; };
 		AEDB773864A47097C8D9FD5A /* Pods_MMapKV_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MMapKV_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -125,6 +133,10 @@
 		ED83F68D20348A760038D96B /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				3E48B98C23600562006C16A3 /* Person.swift */,
+				3E48B98A235FFECB006C16A3 /* AnyCodableEx.swift */,
+				3E48B988235FEA91006C16A3 /* AnyCodableTests.swift */,
+				3E48B98E236005B5006C16A3 /* CodableTests.swift */,
 				ED83F68E20348A760038D96B /* Tests.swift */,
 				ED83F69020348A760038D96B /* Info.plist */,
 			);
@@ -251,10 +263,12 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-MMapKV_Example/Pods-MMapKV_Example-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/AnyCodable/AnyCodable.framework",
 				"${BUILT_PRODUCTS_DIR}/MMapKV/MMapKV.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/AnyCodable.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MMapKV.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -322,7 +336,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3E48B98F236005B5006C16A3 /* CodableTests.swift in Sources */,
+				3E48B98B235FFECB006C16A3 /* AnyCodableEx.swift in Sources */,
 				ED83F68F20348A760038D96B /* Tests.swift in Sources */,
+				3E48B98D23600562006C16A3 /* Person.swift in Sources */,
+				3E48B989235FEA91006C16A3 /* AnyCodableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -498,6 +516,7 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Tests/Info.plist;
@@ -515,6 +534,7 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Tests/Info.plist;

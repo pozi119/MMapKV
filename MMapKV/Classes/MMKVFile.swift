@@ -20,7 +20,7 @@ public final class MMKVFile {
         handle = open(path, O_RDWR | O_CREAT | O_APPEND, S_IRWXU)
         guard handle >= 0 else {
             let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
-            fatalError("fail to open:\(path), \(errmsg)")
+            assert(false, "fail to open:\(path), \(errmsg)")
         }
 
         self.path = path
@@ -52,13 +52,13 @@ public final class MMKVFile {
 
                 guard ftruncate(handle, off_t(actualSize)) == 0 else {
                     let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
-                    fatalError("fail to truncate \(path)  to size \(actualSize), \(errmsg)")
+                    assert(false, "fail to truncate \(path)  to size \(actualSize), \(errmsg)")
                 }
 
                 memory = mmap(nil, actualSize, PROT_READ | PROT_WRITE, MAP_SHARED, handle, 0)
                 guard memory != MAP_FAILED else {
                     let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
-                    fatalError("fail to map \(path), \(errmsg)")
+                    assert(false, "fail to map \(path), \(errmsg)")
                 }
             }
         }
@@ -77,7 +77,7 @@ public final class MMKVFile {
         memory = mmap(nil, _size, PROT_READ | PROT_WRITE, MAP_SHARED, handle, 0)
         guard memory != MAP_FAILED else {
             let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
-            fatalError("fail to map \(path), \(errmsg)")
+            assert(false, "fail to map \(path), \(errmsg)")
         }
     }
 
