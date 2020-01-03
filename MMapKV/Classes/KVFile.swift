@@ -7,7 +7,7 @@
 
 import Foundation
 
-public final class MMKVFile {
+public final class KVFile {
     private var handle: Int32
     private var _size: Int = 0
 

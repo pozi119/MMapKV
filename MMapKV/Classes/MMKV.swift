@@ -8,38 +8,44 @@
 import Foundation
 import zlib
 
+private var pool: [String: Any] = [:]
+
+public extension MMKV {
+    class func fromPool(_ id: String = "com.valo.mmkv",
+                        directory: String = "",
+                        crc: Bool = true) -> MMKV {
+        let dir = MMKV.kvfileDirectory(with: directory)
+        let path = (dir as NSString).appendingPathComponent(id)
+        if let mmkv = pool[path] as? MMKV {
+            return mmkv
+        }
+        let mmkv = MMKV(id, directory: directory, crc: crc)
+        pool[path] = mmkv
+        return mmkv
+    }
+}
+
 public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable {
     public private(set) var dictionary: [Key: Value] = [:]
 
-    private var mmkvfile: MMKVFile
+    private var kvfile: KVFile
     private var dataSize: Int = 0
 
     private var crc: Bool
-    private var crcfile: MMKVFile?
+    private var crcfile: KVFile?
     private var crcdigest: uLong = 0
 
     private(set) var id: String
 
-    public init(_ id: String = "com.enigma.mmkv",
+    public init(_ id: String = "com.valo.mmkv",
                 directory: String = "",
                 crc: Bool = true) {
         // dir
-        var dir = directory
-        if dir.count == 0 {
-            let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
-            dir = (documentDirectory as NSString).appendingPathComponent("MMKV")
-        }
-        let fm = FileManager.default
-        var isdir: ObjCBool = false
-        let exist = fm.fileExists(atPath: dir, isDirectory: &isdir)
-        if !exist || !isdir.boolValue {
-            try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
-        }
-
+        let dir = MMKV.kvfileDirectory(with: directory)
         // mmap file
         let path = (dir as NSString).appendingPathComponent(id)
-        mmkvfile = MMKVFile(path: path)
-        let bytes = [UInt8](Data(bytes: mmkvfile.memory, count: mmkvfile.size))
+        kvfile = KVFile(path: path)
+        let bytes = [UInt8](Data(bytes: kvfile.memory, count: kvfile.size))
         (dictionary, dataSize) = MMKV.decode(bytes)
         self.id = id
         self.crc = crc
@@ -48,8 +54,8 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         guard crc else { return }
         let crcName = (id as NSString).appendingPathExtension("crc") ?? (id + ".crc")
         let crcPath = (dir as NSString).appendingPathComponent(crcName)
-        crcfile = MMKVFile(path: crcPath)
-        let buf = mmkvfile.memory.assumingMemoryBound(to: Bytef.self)
+        crcfile = KVFile(path: crcPath)
+        let buf = kvfile.memory.assumingMemoryBound(to: Bytef.self)
         var calculated_crc: uLong = 0
         calculated_crc = crc32(calculated_crc, buf, uInt(dataSize))
         let stored_crc = crcfile!.memory.load(as: uLong.self)
@@ -60,11 +66,26 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         crcdigest = calculated_crc
     }
 
+    private class func kvfileDirectory(with directory: String) -> String {
+        var dir = directory
+        if dir.count == 0 {
+            let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+            dir = (documentDirectory as NSString).appendingPathComponent("vmmkv")
+        }
+        let fm = FileManager.default
+        var isdir: ObjCBool = false
+        let exist = fm.fileExists(atPath: dir, isDirectory: &isdir)
+        if !exist || !isdir.boolValue {
+            try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
+        }
+        return dir
+    }
+
     private func updateCRC() {
         guard crc && crcfile != nil else { return }
 
         // calculate
-        let buf = mmkvfile.memory.assumingMemoryBound(to: Bytef.self)
+        let buf = kvfile.memory.assumingMemoryBound(to: Bytef.self)
         var crc: uLong = 0
         crc = crc32(crc, buf, uInt(dataSize))
         crcdigest = crc
@@ -78,18 +99,18 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
     private func append(_ bytes: [UInt8]) {
         let len = bytes.count
         let end = dataSize + len
-        if end > mmkvfile.size {
-            mmkvfile.size = end
+        if end > kvfile.size {
+            kvfile.size = end
             resize()
         }
         let range: Range<Int> = Range(uncheckedBounds: (dataSize, end))
-        mmkvfile.write(at: range, from: bytes)
+        kvfile.write(at: range, from: bytes)
         dataSize = end
         updateCRC()
     }
 
     public func resize() {
-        mmkvfile.clear()
+        kvfile.clear()
         dataSize = 0
         for (key, value) in dictionary {
             self[key] = value
