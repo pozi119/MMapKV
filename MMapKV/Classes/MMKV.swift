@@ -92,7 +92,8 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
 
         // store
         let size = MemoryLayout<uLong>.size
-        let rbuf = UnsafeRawPointer(&crc)
+        let pointer = withUnsafePointer(to: &crc) { $0 }
+        let rbuf = UnsafeRawPointer(pointer)
         crcfile!.write(at: 0 ..< size, from: rbuf)
     }
 
