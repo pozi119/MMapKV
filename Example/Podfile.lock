@@ -1,23 +1,16 @@
 PODS:
-  - AnyCodable (1.2.0)
   - MMapKV (0.1.0)
 
 DEPENDENCIES:
-  - AnyCodable
   - MMapKV (from `../`)
-
-SPEC REPOS:
-  trunk:
-    - AnyCodable
 
 EXTERNAL SOURCES:
   MMapKV:
     :path: "../"
 
 SPEC CHECKSUMS:
-  AnyCodable: bb05e19c676899e0fd511652f2d83bfa044e2503
   MMapKV: c84829ac620d6d4144ea15fd22bdfcd3f20163e2
 
-PODFILE CHECKSUM: d421e10f90f390b5997a42295b0bd7d13d64ee77
+PODFILE CHECKSUM: d1bba6480126cd19c6105b0f87d5010c2e176c9c
 
 COCOAPODS: 1.9.3

@@ -5,7 +5,7 @@ use_frameworks!
 
 target 'MMapKV_Example' do
   pod 'MMapKV', :path => '../'
-  pod 'AnyCodable'
+#  pod 'AnyCodable'
 
   target 'MMapKV_Tests' do
     inherit! :search_paths
