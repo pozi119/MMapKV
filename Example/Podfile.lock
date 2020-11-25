@@ -1,16 +1,22 @@
 PODS:
-  - MMapKV (0.1.0)
+  - AnyCoder (0.1.0)
+  - MMapKV (0.1.0):
+    - AnyCoder
 
 DEPENDENCIES:
+  - AnyCoder (from `../../AnyCoder`)
   - MMapKV (from `../`)
 
 EXTERNAL SOURCES:
+  AnyCoder:
+    :path: "../../AnyCoder"
   MMapKV:
     :path: "../"
 
 SPEC CHECKSUMS:
-  MMapKV: c84829ac620d6d4144ea15fd22bdfcd3f20163e2
+  AnyCoder: 35670888672bd6dd81d39e65fee430e6233f283b
+  MMapKV: 3f450b7a5d744784f4073c8a4ddf3edd3e733c33
 
-PODFILE CHECKSUM: d1bba6480126cd19c6105b0f87d5010c2e176c9c
+PODFILE CHECKSUM: e4b6570b25ea3a566528a623e35243eed1541079
 
-COCOAPODS: 1.9.3
+COCOAPODS: 1.10.0

@@ -2,10 +2,11 @@
 platform :osx, '10.12'
 
 use_frameworks!
+install!'cocoapods', :warn_for_unused_master_specs_repo => false
 
 target 'MMapKV_Example' do
+  pod 'AnyCoder', :path => '../../AnyCoder'
   pod 'MMapKV', :path => '../'
-#  pod 'AnyCodable'
 
   target 'MMapKV_Tests' do
     inherit! :search_paths

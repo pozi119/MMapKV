@@ -13,6 +13,14 @@ class Tests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         super.tearDown()
     }
+    
+    func testBytes() {
+        let a: UInt64 = 0xffffffffffffffff
+        print(a.bytes)
+        let bytes:[UInt8] = [255, 255, 255, 255, 255, 255, 255, 255]
+        let b = UInt64(data: Data(bytes))
+        print(b)
+    }
 
     func testWrite() {
         // This is an example of a functional test case.

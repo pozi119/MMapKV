@@ -1,13 +1,13 @@
 //
-//  MMKVFile.swift
-//  MMKV
+//  File.swift
+//  MMapKV
 //
 //  Created by Valo on 2019/6/26.
 //
 
 import Foundation
 
-public final class KVFile {
+public final class File {
     private var handle: Int32
     private var _size: Int = 0
 

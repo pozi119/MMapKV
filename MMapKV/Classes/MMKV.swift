@@ -1,51 +1,52 @@
 //
 //  MMKV.swift
-//  MMKV
+//  MMapKV
 //
 //  Created by Valo on 2019/6/26.
 //
 
+import AnyCoder
 import Foundation
 import zlib
 
 private var pool: [String: Any] = [:]
 
 public extension MMKV {
-    class func fromPool(_ id: String = "com.valo.mmkv",
-                        directory: String = "",
-                        crc: Bool = true) -> MMKV {
-        let dir = MMKV.kvfileDirectory(with: directory)
+    class func create(_ id: String = "com.valo.mmkv",
+                      basedir: String = "",
+                      crc: Bool = true) -> MMKV {
+        let dir = MMKV.directory(with: basedir)
         let path = (dir as NSString).appendingPathComponent(id)
         if let mmkv = pool[path] as? MMKV {
             return mmkv
         }
-        let mmkv = MMKV(id, directory: directory, crc: crc)
+        let mmkv = MMKV(id, basedir: basedir, crc: crc)
         pool[path] = mmkv
         return mmkv
     }
 }
 
-public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable {
+public class MMKV<Key, Value> where Key: Hashable {
     public private(set) var dictionary: [Key: Value] = [:]
 
-    private var kvfile: KVFile
+    private var file: File
     private var dataSize: Int = 0
 
     private var crc: Bool
-    private var crcfile: KVFile?
+    private var crcfile: File?
     private var crcdigest: uLong = 0
 
     private(set) var id: String
 
     public init(_ id: String = "com.valo.mmkv",
-                directory: String = "",
+                basedir: String = "",
                 crc: Bool = true) {
         // dir
-        let dir = MMKV.kvfileDirectory(with: directory)
+        let dir = MMKV.directory(with: basedir)
         // mmap file
         let path = (dir as NSString).appendingPathComponent(id)
-        kvfile = KVFile(path: path)
-        let bytes = [UInt8](Data(bytes: kvfile.memory, count: kvfile.size))
+        file = File(path: path)
+        let bytes = [UInt8](Data(bytes: file.memory, count: file.size))
         (dictionary, dataSize) = MMKV.decode(bytes)
         self.id = id
         self.crc = crc
@@ -54,8 +55,8 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         guard crc else { return }
         let crcName = (id as NSString).appendingPathExtension("crc") ?? (id + ".crc")
         let crcPath = (dir as NSString).appendingPathComponent(crcName)
-        crcfile = KVFile(path: crcPath)
-        let buf = kvfile.memory.assumingMemoryBound(to: Bytef.self)
+        crcfile = File(path: crcPath)
+        let buf = file.memory.assumingMemoryBound(to: Bytef.self)
         var calculated_crc: uLong = 0
         calculated_crc = crc32(calculated_crc, buf, uInt(dataSize))
         let stored_crc = crcfile!.memory.load(as: uLong.self)
@@ -66,12 +67,12 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         crcdigest = calculated_crc
     }
 
-    private class func kvfileDirectory(with directory: String) -> String {
-        var dir = directory
-        if dir.count == 0 {
-            let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
-            dir = (documentDirectory as NSString).appendingPathComponent("vmmkv")
+    private class func directory(with basedir: String = "") -> String {
+        var _basedir = basedir
+        if _basedir.count == 0 {
+            _basedir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         }
+        let dir = (_basedir as NSString).appendingPathComponent("mmapkv")
         let fm = FileManager.default
         var isdir: ObjCBool = false
         let exist = fm.fileExists(atPath: dir, isDirectory: &isdir)
@@ -85,7 +86,7 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
         guard crc && crcfile != nil else { return }
 
         // calculate
-        let buf = kvfile.memory.assumingMemoryBound(to: Bytef.self)
+        let buf = file.memory.assumingMemoryBound(to: Bytef.self)
         var crc: uLong = 0
         crc = crc32(crc, buf, uInt(dataSize))
         crcdigest = crc
@@ -100,18 +101,18 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
     private func append(_ bytes: [UInt8]) {
         let len = bytes.count
         let end = dataSize + len
-        if end > kvfile.size {
-            kvfile.size = end
+        if end > file.size {
+            file.size = end
             resize()
         }
         let range: Range<Int> = Range(uncheckedBounds: (dataSize, end))
-        kvfile.write(at: range, from: bytes)
+        file.write(at: range, from: bytes)
         dataSize = end
         updateCRC()
     }
 
     public func resize() {
-        kvfile.clear()
+        file.clear()
         dataSize = 0
         for (key, value) in dictionary {
             self[key] = value
@@ -119,19 +120,33 @@ public class MMKV<Key, Value> where Key: Hashable, Key: Codable, Value: Codable 
     }
 }
 
-private let MMapKeyFlag: [UInt8] = [0x4B, 0x45, 0x59]
-private let MMapValueFlag: [UInt8] = [0x56, 0x41, 0x4C]
-private let MMapEncoder = JSONEncoder()
-private let MMapDecoder = JSONDecoder()
+private let keyFlag: [UInt8] = [0x4B, 0x45, 0x59]
+private let valueFlag: [UInt8] = [0x56, 0x41, 0x4C]
+
+private func toData(_ any: Any?) -> Data? {
+    guard let obj = any else { return nil }
+    if let primitive = obj as? Primitive {
+        if let data = Data(primitive: primitive) {
+            return data
+        }
+    }
+    var data = try? JSONSerialization.data(withJSONObject: obj, options: [])
+    if data == nil {
+        if let dic = try? AnyEncoder.encode(obj) {
+            data = try? JSONSerialization.data(withJSONObject: dic, options: [])
+        }
+    }
+    return data
+}
 
 extension MMKV {
     static func encode(_ element: (Key, Value?)) -> [UInt8] {
-        guard let keyData = try? MMapEncoder.encode(element.0) else {
+        guard let keyData = toData(element.0) else {
             return []
         }
         let keyBytes = [UInt8](keyData)
         var valueBytes = [UInt8]()
-        if let valueData = try? MMapEncoder.encode(element.1) {
+        if let valueData = toData(element.1) {
             valueBytes = [UInt8](valueData)
         }
 
@@ -147,8 +162,8 @@ extension MMKV {
         let keySizeBytes = sizeBytes(of: keyBytes)
         let valueSizeBytes = sizeBytes(of: valueBytes)
 
-        var bytes = MMapKeyFlag + keySizeBytes + keyBytes
-        bytes += MMapValueFlag + valueSizeBytes + valueBytes
+        var bytes = keyFlag + keySizeBytes + keyBytes
+        bytes += valueFlag + valueSizeBytes + valueBytes
         return bytes
     }
 
@@ -157,7 +172,7 @@ extension MMKV {
         var results: [Key: Value] = [:]
         let total = bytes.count
 
-        func parse<T: Codable>(type: T.Type, flag: [UInt8]) -> (T?, Int) {
+        func parse<T>(type: T.Type, flag: [UInt8]) -> (T?, Int) {
             var start = offset
             var end = start + 3
             guard end <= total else { return (nil, offset) }
@@ -177,16 +192,47 @@ extension MMKV {
             end = start + size
             guard end <= total else { return (nil, offset) }
             buf = [UInt8](bytes[start ..< end])
-            let r = try? MMapDecoder.decode(T.self, from: Data(buf))
-            return (r, end)
+            let data = Data(buf)
+
+            var any: Any?
+            switch type {
+                case is Int.Type: any = Int(primitive: data)
+                case is Int8.Type: any = Int8(primitive: data)
+                case is Int16.Type: any = Int16(primitive: data)
+                case is Int32.Type: any = Int32(primitive: data)
+                case is Int64.Type: any = Int64(primitive: data)
+                case is UInt.Type: any = UInt(primitive: data)
+                case is UInt8.Type: any = UInt8(primitive: data)
+                case is UInt16.Type: any = UInt16(primitive: data)
+                case is UInt32.Type: any = UInt32(primitive: data)
+                case is UInt64.Type: any = UInt64(primitive: data)
+                case is Bool.Type: any = Bool(primitive: data)
+                case is Float.Type: any = Float(primitive: data)
+                case is Double.Type: any = Double(primitive: data)
+                case is String.Type: any = String(primitive: data)
+                case is Data.Type: any = Data(primitive: data)
+                default: break
+            }
+            if any == nil {
+                any = try? JSONSerialization.jsonObject(with: data, options: [])
+            }
+            if let r = any as? T {
+                return (r, end)
+            }
+            if let dic = any as? [String: Primitive] {
+                if let r = try? AnyDecoder.decode(T.self, from: dic) {
+                    return (r, end)
+                }
+            }
+            return (nil, end)
         }
 
         while offset < total {
-            let (key, key_end) = parse(type: Key.self, flag: MMapKeyFlag)
+            let (key, key_end) = parse(type: Key.self, flag: keyFlag)
             if key == nil { break }
 
             offset = key_end
-            let (val, val_end) = parse(type: Value.self, flag: MMapValueFlag)
+            let (val, val_end) = parse(type: Value.self, flag: valueFlag)
             if offset == val_end { break }
 
             results[key!] = val
