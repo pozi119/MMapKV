@@ -21,6 +21,6 @@ Pod::Spec.new do |s|
   s.swift_version = '5.0'
 
   s.source_files = 'MMapKV/Classes/**/*'
-  s.dependency 'AnyCoder'
+  s.dependency 'AnyCoder', '~> 0.1.1-beta1'
 
 end
