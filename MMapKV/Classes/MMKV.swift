@@ -130,7 +130,10 @@ private func toData(_ any: Any?) -> Data? {
             return data
         }
     }
-    var data = try? JSONSerialization.data(withJSONObject: obj, options: [])
+    var data: Data?
+    if JSONSerialization.isValidJSONObject(obj) {
+        data = try? JSONSerialization.data(withJSONObject: obj, options: [])
+    }
     if data == nil {
         if let dic = try? AnyEncoder.encode(obj) {
             data = try? JSONSerialization.data(withJSONObject: dic, options: [])
@@ -219,8 +222,10 @@ extension MMKV {
             if let r = any as? T {
                 return (r, end)
             }
-            if let dic = any as? [String: Primitive] {
-                if let r = try? AnyDecoder.decode(T.self, from: dic) {
+            if let dic = any as? [String: Any] {
+                var _dic: [String: Primitive] = [:]
+                dic.forEach { _dic[$0.key] = ($0.value as? Primitive) ?? "" }
+                if let r = try? AnyDecoder.decode(T.self, from: _dic) {
                     return (r, end)
                 }
             }
