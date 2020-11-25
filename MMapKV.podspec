@@ -18,6 +18,8 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
 
+  s.swift_version = '5.0'
+
   s.source_files = 'MMapKV/Classes/**/*'
   s.dependency 'AnyCoder'
 

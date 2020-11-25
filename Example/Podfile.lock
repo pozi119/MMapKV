@@ -1,7 +1,7 @@
 PODS:
-  - AnyCoder (0.1.0)
-  - MMapKV (0.1.0):
-    - AnyCoder
+  - AnyCoder (0.1.1-beta1)
+  - MMapKV (0.1.0-beta1):
+    - AnyCoder (~> 0.1.0-beta1)
 
 DEPENDENCIES:
   - AnyCoder (from `../../AnyCoder`)
@@ -14,8 +14,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  AnyCoder: 35670888672bd6dd81d39e65fee430e6233f283b
-  MMapKV: 3f450b7a5d744784f4073c8a4ddf3edd3e733c33
+  AnyCoder: abbe6faebdff3fae37187109ee6af04e26c62d3c
+  MMapKV: 7c2014ae460c873957075ab658bdd4dff459d8d2
 
 PODFILE CHECKSUM: e4b6570b25ea3a566528a623e35243eed1541079
 

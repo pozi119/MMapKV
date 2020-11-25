@@ -18,7 +18,7 @@ public final class File {
 
     public init(path: String) {
         handle = open(path, O_RDWR | O_CREAT | O_APPEND, S_IRWXU)
-        guard handle >= 0 else {
+        if handle == 0 {
             let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
             assert(false, "fail to open:\(path), \(errmsg)")
         }
@@ -50,13 +50,13 @@ public final class File {
                 munmap(memory, _size)
                 _size = actualSize
 
-                guard ftruncate(handle, off_t(actualSize)) == 0 else {
+                if ftruncate(handle, off_t(actualSize)) != 0 {
                     let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
                     assert(false, "fail to truncate \(path)  to size \(actualSize), \(errmsg)")
                 }
 
                 memory = mmap(nil, actualSize, PROT_READ | PROT_WRITE, MAP_SHARED, handle, 0)
-                guard memory != MAP_FAILED else {
+                if memory == MAP_FAILED {
                     let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
                     assert(false, "fail to map \(path), \(errmsg)")
                 }
@@ -75,7 +75,7 @@ public final class File {
     public func remap() {
         munmap(memory, _size)
         memory = mmap(nil, _size, PROT_READ | PROT_WRITE, MAP_SHARED, handle, 0)
-        guard memory != MAP_FAILED else {
+        if memory == MAP_FAILED {
             let errmsg = String(cString: strerror(errno), encoding: .utf8) ?? ""
             assert(false, "fail to map \(path), \(errmsg)")
         }

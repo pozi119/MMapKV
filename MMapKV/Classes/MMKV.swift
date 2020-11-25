@@ -60,7 +60,7 @@ public class MMKV<Key, Value> where Key: Hashable {
         var calculated_crc: uLong = 0
         calculated_crc = crc32(calculated_crc, buf, uInt(dataSize))
         let stored_crc = crcfile!.memory.load(as: uLong.self)
-        guard calculated_crc == stored_crc else {
+        if calculated_crc != stored_crc {
             updateCRC()
             assert(false, "check crc [\(id)] fail, claculated:\(calculated_crc), stored:\(stored_crc)\n")
         }
