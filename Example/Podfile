@@ -1,5 +1,4 @@
-
-platform :osx, '10.12'
+platform :osx, '10.13'
 
 use_frameworks!
 install!'cocoapods', :warn_for_unused_master_specs_repo => false
@@ -7,6 +6,7 @@ install!'cocoapods', :warn_for_unused_master_specs_repo => false
 target 'MMapKV_Example' do
   pod 'AnyCoder', :path => '../../AnyCoder'
   pod 'MMapKV', :path => '../'
+  pod 'Runtime', :git => 'https://github.com/wickwirew/Runtime.git'
 
   target 'MMapKV_Tests' do
     inherit! :search_paths

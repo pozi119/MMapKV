@@ -24,7 +24,6 @@ class Tests: XCTestCase {
 
     func testWrite() {
         // This is an example of a functional test case.
-        XCTAssert(true, "Pass")
         mmkv["b"] = 0
         mmkv["i"] = -1
         mmkv["i8"] = -8
@@ -42,6 +41,7 @@ class Tests: XCTestCase {
         mmkv["str"] = 1000
         mmkv["max"] = Int.min
         mmkv["min"] = Int.max
+        XCTAssert(true, "Pass")
     }
 
     func testRead() {

@@ -125,17 +125,25 @@ private let valueFlag: [UInt8] = [0x56, 0x41, 0x4C]
 
 private func toData(_ any: Any?) -> Data? {
     guard let obj = any else { return nil }
-    if let primitive = obj as? Primitive {
-        if let data = Data(primitive: primitive) {
-            return data
-        }
-    }
     var data: Data?
+    switch obj {
+    case let s as String: data = Data(s.bytes)
+    case let i as any BinaryInteger: data = Data(integer: i)
+    case let f as any BinaryFloatingPoint: data = Data(floating: f)
+    default: break
+    }
+    if let data { return data }
     if JSONSerialization.isValidJSONObject(obj) {
         data = try? JSONSerialization.data(withJSONObject: obj, options: [])
     }
     if data == nil {
-        if let dic = try? AnyEncoder.encode(obj) {
+        var dic: Any?
+        if let obj = obj as? any Codable {
+            dic = try? ManyEncoder().encode(obj)
+        } else {
+            dic = try? AnyEncoder.encode(obj)
+        }
+        if let dic {
             data = try? JSONSerialization.data(withJSONObject: dic, options: [])
         }
     }
@@ -199,22 +207,10 @@ extension MMKV {
 
             var any: Any?
             switch type {
-                case is Int.Type: any = Int(primitive: data)
-                case is Int8.Type: any = Int8(primitive: data)
-                case is Int16.Type: any = Int16(primitive: data)
-                case is Int32.Type: any = Int32(primitive: data)
-                case is Int64.Type: any = Int64(primitive: data)
-                case is UInt.Type: any = UInt(primitive: data)
-                case is UInt8.Type: any = UInt8(primitive: data)
-                case is UInt16.Type: any = UInt16(primitive: data)
-                case is UInt32.Type: any = UInt32(primitive: data)
-                case is UInt64.Type: any = UInt64(primitive: data)
-                case is Bool.Type: any = Bool(primitive: data)
-                case is Float.Type: any = Float(primitive: data)
-                case is Double.Type: any = Double(primitive: data)
-                case is String.Type: any = String(primitive: data)
-                case is Data.Type: any = Data(primitive: data)
-                default: break
+            case let u as any BinaryInteger.Type: any = u.init(data: data) as! T
+            case let u as any BinaryFloatingPoint.Type: any = u.init(data: data) as! T
+            case let u as String.Type: any = u.init(bytes: buf)
+            default: break
             }
             if any == nil {
                 any = try? JSONSerialization.jsonObject(with: data, options: [])
@@ -225,7 +221,13 @@ extension MMKV {
             if let dic = any as? [String: Any] {
                 var _dic: [String: Primitive] = [:]
                 dic.forEach { _dic[$0.key] = ($0.value as? Primitive) ?? "" }
-                if let r = try? AnyDecoder.decode(T.self, from: _dic) {
+                var r: T?
+                if let u = T.self as? Codable.Type {
+                    r = try? ManyDecoder().decode(u.self, from: _dic) as? T
+                } else {
+                    r = try? AnyDecoder.decode(T.self, from: _dic)
+                }
+                if let r {
                     return (r, end)
                 }
             }
