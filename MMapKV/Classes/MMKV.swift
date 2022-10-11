@@ -11,6 +11,8 @@ import zlib
 
 private var pool: [String: MMKV] = [:]
 
+public let mmkvDidUpdateNotification = Notification.Name("mmkvDidUpdateNotification")
+
 public extension MMKV {
     class func create(_ id: String = "com.valo.mmkv",
                       basedir: String = "",
@@ -37,6 +39,8 @@ public class MMKV {
     private var crcdigest: uLong = 0
 
     private(set) var id: String
+
+    public var notificationCenter: NotificationCenter?
 
     public init(_ id: String = "com.valo.mmkv",
                 basedir: String = "",
@@ -120,60 +124,61 @@ public class MMKV {
     }
 }
 
-private let KeyFlag: [UInt8] = [0x4B, 0x45, 0x59]
-private let ValFlag: [UInt8] = [0x56, 0x41, 0x4C]
+extension MMKV {
+    static let KeyFlag: [UInt8] = [0x4B, 0x45, 0x59]
+    static let ValFlag: [UInt8] = [0x56, 0x41, 0x4C]
 
-private let OrderedTypes: [Any.Type] = [
-    Any.self,
-    Bool.self,
-    Int.self, Int8.self, Int16.self, Int32.self, Int64.self,
-    UInt.self, UInt8.self, UInt16.self, UInt32.self, UInt64.self,
-    Float.self, Double.self,
-    String.self, Data.self,
-]
+    static let Supported: [Any.Type] = [
+        Any.self,
+        Bool.self,
+        Int.self, Int8.self, Int16.self, Int32.self, Int64.self,
+        UInt.self, UInt8.self, UInt16.self, UInt32.self, UInt64.self,
+        Float.self, Double.self,
+        String.self, Data.self,
+        NSNumber.self, NSString.self, NSData.self,
+    ]
 
-private func valueType(of flag: Int) -> Any.Type {
-    return OrderedTypes[flag]
-}
-
-private func typeBytes(of value: Any?) -> [UInt8] {
-    guard let value = value else { return [0] }
-    let type = type(of: value)
-    guard let idx = OrderedTypes.firstIndex(where: { type == $0 }) else { return [0] }
-    return [UInt8(idx)]
-}
-
-private func toData(_ any: Any?) -> Data? {
-    guard let obj = any else { return nil }
-    var data: Data?
-    switch obj {
-    case let b as Bool: data = Data(integer: b ? 1 : 0)
-    case let i as any BinaryInteger: data = Data(integer: i)
-    case let f as any BinaryFloatingPoint: data = Data(floating: f)
-    case let s as String: data = Data(s.bytes)
-    case let d as Data: data = d
-    default: break
+    class func valueType(of flag: Int) -> Any.Type {
+        return Supported[flag]
     }
-    if let data { return data }
-    if JSONSerialization.isValidJSONObject(obj) {
-        data = try? JSONSerialization.data(withJSONObject: obj, options: [])
-    }
-    if data == nil {
-        var dic: Any?
-        if let obj = obj as? any Codable {
-            dic = try? ManyEncoder().encode(obj)
-        } else {
-            dic = try? AnyEncoder.encode(obj)
+
+    class func typeBytes(of value: Any?) -> [UInt8] {
+        guard let value = value else { return [0] }
+        var t = type(of: value)
+        if let idx = Supported.firstIndex(where: { t == $0 }) {
+            return [UInt8(idx)]
         }
-        if let dic {
-            data = try? JSONSerialization.data(withJSONObject: dic, options: [])
+        switch value {
+        case _ as NSNumber: t = NSNumber.self
+        case _ as NSString: t = NSString.self
+        case _ as NSData: t = NSData.self
+        default: break
         }
+        if let idx = Supported.firstIndex(where: { t == $0 }) {
+            return [UInt8(idx)]
+        }
+        return [0]
     }
-    return data
+
+    class func toData(_ any: Any?) -> Data? {
+        guard let any = any else { return nil }
+        var data: Data?
+        switch any {
+        case let obj as Bool: data = Data(numeric: obj ? 1 : 0)
+        case let obj as any Numeric: data = Data(numeric: obj)
+        case let obj as String: data = Data(obj.bytes)
+        case let obj as Data: data = obj
+        case let obj as NSNumber: data = Data(numeric: obj.doubleValue)
+        case let obj as NSString: data = Data((obj as String).bytes)
+        case let obj as NSData: data = obj as Data
+        default: assert(false, "unsupported value: \(any)")
+        }
+        return data
+    }
 }
 
 extension MMKV {
-    static func encode(_ element: (key: String, value: Primitive?)) -> [UInt8] {
+    class func encode(_ element: (key: String, value: Primitive?)) -> [UInt8] {
         guard let keyData = toData(element.key) else {
             return []
         }
@@ -201,14 +206,14 @@ extension MMKV {
         return bytes
     }
 
-    static func decode(_ bytes: [UInt8]) -> ([String: Primitive], Int) {
+    class func decode(_ bytes: [UInt8]) -> ([String: Primitive], Int) {
         var offset: Int = 0
         var results: [String: Primitive] = [:]
         let total = bytes.count
 
         enum FLAG { case key, val }
         func parse(_ flag: FLAG) -> (Primitive?, Int) {
-            let flagBuf = flag == .key  ? KeyFlag : ValFlag
+            let flagBuf = flag == .key ? KeyFlag : ValFlag
             // flag bytes
             var start = offset
             var end = start + 3
@@ -251,6 +256,9 @@ extension MMKV {
             case let u as any BinaryFloatingPoint.Type: any = u.init(data: data) as any BinaryFloatingPoint
             case is String.Type: any = String(bytes: buf)
             case is Data.Type: any = data
+            case is NSNumber.Type: any = NSNumber(floatLiteral: Double(data: data))
+            case is NSString.Type: any = String(bytes: buf) as NSString
+            case is NSData.Type: any = data as NSData
             default: break
             }
             guard let primitive = any as? Primitive else { return (nil, end) }
@@ -284,6 +292,7 @@ extension MMKV {
             dictionary[key] = newValue
             let mmaped = MMKV.encode((key, newValue))
             append(mmaped)
+            notificationCenter?.post(name: mmkvDidUpdateNotification, object: (key, newValue))
         }
     }
 }

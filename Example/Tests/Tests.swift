@@ -1,3 +1,4 @@
+import AnyCoder
 import MMapKV
 import XCTest
 
@@ -13,11 +14,11 @@ class Tests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         super.tearDown()
     }
-    
+
     func testBytes() {
-        let a: UInt64 = 0xffffffffffffffff
+        let a: UInt64 = 0xFFFFFFFFFFFFFFFF
         print(a.bytes)
-        let bytes:[UInt8] = [255, 255, 255, 255, 255, 255, 255, 255]
+        let bytes: [UInt8] = [255, 255, 255, 255, 255, 255, 255, 255]
         let b = UInt64(data: Data(bytes))
         print(b)
     }
@@ -38,9 +39,13 @@ class Tests: XCTestCase {
         mmkv["f"] = 11
         mmkv["d"] = 22
         mmkv["f80"] = 80
-        mmkv["str"] = "1000"
         mmkv["max"] = Int.min
         mmkv["min"] = Int.max
+        mmkv["string"] = "1000"
+        mmkv["data"] = Data([13])
+        mmkv["nsnumber"] = NSNumber(floatLiteral: 11.11)
+        mmkv["nsstring"] = NSString(string: "2000")
+        mmkv["nsdata"] = NSData(data: Data([11]))
         XCTAssert(true, "Pass")
     }
 
@@ -62,6 +67,11 @@ class Tests: XCTestCase {
         print(mmkv["str"] as Any)
         print(mmkv["max"] as Any)
         print(mmkv["min"] as Any)
+        print(mmkv["string"] as Any)
+        print(mmkv["data"] as Any)
+        print(mmkv["nsnumber"] as Any)
+        print(mmkv["nsstring"] as Any)
+        print(mmkv["nsdata"] as Any)
 
         XCTAssert(mmkv["b"] as? Int == 0)
         XCTAssert(mmkv["i"] as? Int == -1)
@@ -77,8 +87,12 @@ class Tests: XCTestCase {
         XCTAssert(mmkv["f"] as? Int == 11)
         XCTAssert(mmkv["d"] as? Int == 22)
         XCTAssert(mmkv["f80"] as? Int == 80)
-        XCTAssert(mmkv["str"] as? String == "1000")
         XCTAssert(mmkv["max"] as? Int == Int.min)
         XCTAssert(mmkv["min"] as? Int == Int.max)
+        XCTAssert(mmkv["string"] as? String == "1000")
+        XCTAssert(mmkv["data"] as? Data == Data([13]))
+        XCTAssert(mmkv["nsnumber"] as? NSNumber == NSNumber(floatLiteral: 11.11))
+        XCTAssert(mmkv["nsstring"] as? NSString == NSString(string: "2000"))
+        XCTAssert(mmkv["nsdata"] as? NSData == NSData(data: Data([11])))
     }
 }
