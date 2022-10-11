@@ -19,6 +19,6 @@ Pod::Spec.new do |s|
   s.watchos.deployment_target = '3.0'
 
   s.source_files = 'MMapKV/Classes/**/*'
-  s.dependency 'AnyCoder', '~> 0.1.1-beta1'
+  s.dependency 'AnyCoder', '~> 0.1.3'
 
 end

@@ -9,7 +9,7 @@ import AnyCoder
 import Foundation
 import zlib
 
-private var pool: [String: Any] = [:]
+private var pool: [String: MMKV] = [:]
 
 public extension MMKV {
     class func create(_ id: String = "com.valo.mmkv",
@@ -17,7 +17,7 @@ public extension MMKV {
                       crc: Bool = true) -> MMKV {
         let dir = MMKV.directory(with: basedir)
         let path = (dir as NSString).appendingPathComponent(id)
-        if let mmkv = pool[path] as? MMKV {
+        if let mmkv = pool[path] {
             return mmkv
         }
         let mmkv = MMKV(id, basedir: basedir, crc: crc)
@@ -26,8 +26,8 @@ public extension MMKV {
     }
 }
 
-public class MMKV<Key, Value> where Key: Hashable {
-    public private(set) var dictionary: [Key: Value] = [:]
+public class MMKV {
+    public private(set) var dictionary: [String: Primitive] = [:]
 
     private var file: File
     private var dataSize: Int = 0
@@ -114,22 +114,44 @@ public class MMKV<Key, Value> where Key: Hashable {
     public func resize() {
         file.clear()
         dataSize = 0
-        for (key, value) in dictionary {
-            self[key] = value
+        for (key, val) in dictionary {
+            self[key] = val
         }
     }
 }
 
-private let keyFlag: [UInt8] = [0x4B, 0x45, 0x59]
-private let valueFlag: [UInt8] = [0x56, 0x41, 0x4C]
+private let KeyFlag: [UInt8] = [0x4B, 0x45, 0x59]
+private let ValFlag: [UInt8] = [0x56, 0x41, 0x4C]
+
+private let OrderedTypes: [Any.Type] = [
+    Any.self,
+    Bool.self,
+    Int.self, Int8.self, Int16.self, Int32.self, Int64.self,
+    UInt.self, UInt8.self, UInt16.self, UInt32.self, UInt64.self,
+    Float.self, Double.self,
+    String.self, Data.self,
+]
+
+private func valueType(of flag: Int) -> Any.Type {
+    return OrderedTypes[flag]
+}
+
+private func typeBytes(of value: Any?) -> [UInt8] {
+    guard let value = value else { return [0] }
+    let type = type(of: value)
+    guard let idx = OrderedTypes.firstIndex(where: { type == $0 }) else { return [0] }
+    return [UInt8(idx)]
+}
 
 private func toData(_ any: Any?) -> Data? {
     guard let obj = any else { return nil }
     var data: Data?
     switch obj {
-    case let s as String: data = Data(s.bytes)
+    case let b as Bool: data = Data(integer: b ? 1 : 0)
     case let i as any BinaryInteger: data = Data(integer: i)
     case let f as any BinaryFloatingPoint: data = Data(floating: f)
+    case let s as String: data = Data(s.bytes)
+    case let d as Data: data = d
     default: break
     }
     if let data { return data }
@@ -151,14 +173,14 @@ private func toData(_ any: Any?) -> Data? {
 }
 
 extension MMKV {
-    static func encode(_ element: (Key, Value?)) -> [UInt8] {
-        guard let keyData = toData(element.0) else {
+    static func encode(_ element: (key: String, value: Primitive?)) -> [UInt8] {
+        guard let keyData = toData(element.key) else {
             return []
         }
         let keyBytes = [UInt8](keyData)
-        var valueBytes = [UInt8]()
-        if let valueData = toData(element.1) {
-            valueBytes = [UInt8](valueData)
+        var valBytes = [UInt8]()
+        if let valData = toData(element.value) {
+            valBytes = [UInt8](valData)
         }
 
         func sizeBytes(of bytes: [UInt8]) -> [UInt8] {
@@ -171,25 +193,30 @@ extension MMKV {
         }
 
         let keySizeBytes = sizeBytes(of: keyBytes)
-        let valueSizeBytes = sizeBytes(of: valueBytes)
+        let valSizeBytes = sizeBytes(of: valBytes)
+        let valTypeBytes = typeBytes(of: element.value)
 
-        var bytes = keyFlag + keySizeBytes + keyBytes
-        bytes += valueFlag + valueSizeBytes + valueBytes
+        var bytes = KeyFlag + keySizeBytes + keyBytes
+        bytes += ValFlag + valSizeBytes + valTypeBytes + valBytes
         return bytes
     }
 
-    static func decode(_ bytes: [UInt8]) -> ([Key: Value], Int) {
+    static func decode(_ bytes: [UInt8]) -> ([String: Primitive], Int) {
         var offset: Int = 0
-        var results: [Key: Value] = [:]
+        var results: [String: Primitive] = [:]
         let total = bytes.count
 
-        func parse<T>(type: T.Type, flag: [UInt8]) -> (T?, Int) {
+        enum FLAG { case key, val }
+        func parse(_ flag: FLAG) -> (Primitive?, Int) {
+            let flagBuf = flag == .key  ? KeyFlag : ValFlag
+            // flag bytes
             var start = offset
             var end = start + 3
             guard end <= total else { return (nil, offset) }
             var buf = [UInt8](bytes[start ..< end])
-            if buf != flag { return (nil, offset) }
+            if buf != flagBuf { return (nil, offset) }
 
+            // size bytes
             start = end
             end = start + 4
             guard end <= total else { return (nil, offset) }
@@ -199,50 +226,48 @@ extension MMKV {
                 size |= Int(buf[i]) << (i * 8)
             }
 
+            var type: Any.Type = String.self
+            if flag == .val {
+                // type byte
+                start = end
+                end = start + 1
+                guard end <= total else { return (nil, offset) }
+                let typeByte = bytes[start]
+                type = valueType(of: Int(typeByte))
+            }
+
+            // value bytes
             start = end
             end = start + size
             guard end <= total else { return (nil, offset) }
             buf = [UInt8](bytes[start ..< end])
             let data = Data(buf)
 
+            // to value
             var any: Any?
             switch type {
-            case let u as any BinaryInteger.Type: any = u.init(data: data) as! T
-            case let u as any BinaryFloatingPoint.Type: any = u.init(data: data) as! T
-            case let u as String.Type: any = u.init(bytes: buf)
+            case is Bool.Type: any = Int(data: data) > 0 ? true : false
+            case let u as any BinaryInteger.Type: any = u.init(data: data) as any BinaryInteger
+            case let u as any BinaryFloatingPoint.Type: any = u.init(data: data) as any BinaryFloatingPoint
+            case is String.Type: any = String(bytes: buf)
+            case is Data.Type: any = data
             default: break
             }
-            if any == nil {
-                any = try? JSONSerialization.jsonObject(with: data, options: [])
-            }
-            if let r = any as? T {
-                return (r, end)
-            }
-            if let dic = any as? [String: Any] {
-                var _dic: [String: Primitive] = [:]
-                dic.forEach { _dic[$0.key] = ($0.value as? Primitive) ?? "" }
-                var r: T?
-                if let u = T.self as? Codable.Type {
-                    r = try? ManyDecoder().decode(u.self, from: _dic) as? T
-                } else {
-                    r = try? AnyDecoder.decode(T.self, from: _dic)
-                }
-                if let r {
-                    return (r, end)
-                }
-            }
-            return (nil, end)
+            guard let primitive = any as? Primitive else { return (nil, end) }
+            return (primitive, end)
         }
 
         while offset < total {
-            let (key, key_end) = parse(type: Key.self, flag: keyFlag)
+            let (key, key_end) = parse(.key)
             if key == nil { break }
 
             offset = key_end
-            let (val, val_end) = parse(type: Value.self, flag: valueFlag)
+            let (val, val_end) = parse(.val)
             if offset == val_end { break }
 
-            results[key!] = val
+            if let key = key as? String {
+                results[key] = val
+            }
             offset = val_end
         }
 
@@ -251,7 +276,7 @@ extension MMKV {
 }
 
 extension MMKV {
-    public subscript(key: Key) -> Value? {
+    public subscript(key: String) -> Primitive? {
         get {
             return dictionary[key]
         }
