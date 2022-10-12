@@ -1,7 +1,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'MMapKV'
-  s.version          = '0.1.0'
+  s.version          = '0.1.1'
   s.summary          = 'MMap Key-Value storage.'
 
   s.description      = <<-DESC
@@ -19,6 +19,6 @@ Pod::Spec.new do |s|
   s.watchos.deployment_target = '3.0'
 
   s.source_files = 'MMapKV/Classes/**/*'
-  s.dependency 'AnyCoder', '~> 0.1.3'
+  s.dependency 'AnyCoder', '~> 0.1.4'
 
 end

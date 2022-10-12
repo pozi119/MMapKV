@@ -17,9 +17,13 @@ MMapKV is available through [CocoaPods](https://cocoapods.org). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
-pod 'MMapKV', '~> 0.1.0'
+pod 'MMapKV', '~> 0.1.1'
 pod 'Runtime', :git => 'https://github.com/wickwirew/Runtime.git' // The version in pods is 2.2.2, which requires 2.2.4
 ```
+
+## Change(0.1.1)
+1. 不在使用泛型，Key使用String类型，Value使用AnyCoder定义的Primitive类型；不再支持复杂对象。
+2. 添加didUpdate回调。
 
 ## Author
 
