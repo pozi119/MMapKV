@@ -11,18 +11,17 @@ import zlib
 
 private var pool: [String: MMKV] = [:]
 
-public let mmkvDidUpdateNotification = Notification.Name("mmkvDidUpdateNotification")
-
 public extension MMKV {
     class func create(_ id: String = "com.valo.mmkv",
-                      basedir: String = "",
-                      crc: Bool = true) -> MMKV {
-        let dir = MMKV.directory(with: basedir)
+                      base: String = "",
+                      crc: Bool = true,
+                      didUpdate: DidUpdate? = nil) -> MMKV {
+        let dir = MMKV.directory(with: base)
         let path = (dir as NSString).appendingPathComponent(id)
         if let mmkv = pool[path] {
             return mmkv
         }
-        let mmkv = MMKV(id, basedir: basedir, crc: crc)
+        let mmkv = MMKV(id, base: base, crc: crc, didUpdate: didUpdate)
         pool[path] = mmkv
         return mmkv
     }
@@ -30,6 +29,9 @@ public extension MMKV {
 
 public class MMKV {
     public private(set) var dictionary: [String: Primitive] = [:]
+
+    public typealias DidUpdate = ((key: String, value: Primitive?)) -> Void
+    public var didUpdate: DidUpdate?
 
     private var file: File
     private var dataSize: Int = 0
@@ -40,13 +42,12 @@ public class MMKV {
 
     private(set) var id: String
 
-    public var notificationCenter: NotificationCenter?
-
     public init(_ id: String = "com.valo.mmkv",
-                basedir: String = "",
-                crc: Bool = true) {
+                base: String = "",
+                crc: Bool = true,
+                didUpdate: DidUpdate? = nil) {
         // dir
-        let dir = MMKV.directory(with: basedir)
+        let dir = MMKV.directory(with: base)
         // mmap file
         let path = (dir as NSString).appendingPathComponent(id)
         file = File(path: path)
@@ -54,6 +55,7 @@ public class MMKV {
         (dictionary, dataSize) = MMKV.decode(bytes)
         self.id = id
         self.crc = crc
+        self.didUpdate = didUpdate
 
         // crc
         guard crc else { return }
@@ -71,12 +73,12 @@ public class MMKV {
         crcdigest = calculated_crc
     }
 
-    private class func directory(with basedir: String = "") -> String {
-        var _basedir = basedir
-        if _basedir.count == 0 {
-            _basedir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+    private class func directory(with base: String = "") -> String {
+        var _base = base
+        if _base.count == 0 {
+            _base = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         }
-        let dir = (_basedir as NSString).appendingPathComponent("mmapkv")
+        let dir = (_base as NSString).appendingPathComponent("mmapkv")
         let fm = FileManager.default
         var isdir: ObjCBool = false
         let exist = fm.fileExists(atPath: dir, isDirectory: &isdir)
@@ -136,6 +138,7 @@ extension MMKV {
         Float.self, Double.self,
         String.self, Data.self,
         NSNumber.self, NSString.self, NSData.self,
+        CGFloat.self,
     ]
 
     class func valueType(of flag: Int) -> Any.Type {
@@ -292,7 +295,7 @@ extension MMKV {
             dictionary[key] = newValue
             let mmaped = MMKV.encode((key, newValue))
             append(mmaped)
-            notificationCenter?.post(name: mmkvDidUpdateNotification, object: (key, newValue))
+            didUpdate?((key, newValue))
         }
     }
 }

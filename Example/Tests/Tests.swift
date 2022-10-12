@@ -46,6 +46,9 @@ class Tests: XCTestCase {
         mmkv["nsnumber"] = NSNumber(floatLiteral: 11.11)
         mmkv["nsstring"] = NSString(string: "2000")
         mmkv["nsdata"] = NSData(data: Data([11]))
+        mmkv["cgfloat"] = CGFloat(22.22)
+        mmkv["float"] = Float(11.11)
+        mmkv["double"] = Double(33.33)
         XCTAssert(true, "Pass")
     }
 
@@ -72,6 +75,9 @@ class Tests: XCTestCase {
         print(mmkv["nsnumber"] as Any)
         print(mmkv["nsstring"] as Any)
         print(mmkv["nsdata"] as Any)
+        print(mmkv["cgfloat"] as Any)
+        print(mmkv["float"] as Any)
+        print(mmkv["double"] as Any)
 
         XCTAssert(mmkv["b"] as? Int == 0)
         XCTAssert(mmkv["i"] as? Int == -1)
@@ -94,5 +100,8 @@ class Tests: XCTestCase {
         XCTAssert(mmkv["nsnumber"] as? NSNumber == NSNumber(floatLiteral: 11.11))
         XCTAssert(mmkv["nsstring"] as? NSString == NSString(string: "2000"))
         XCTAssert(mmkv["nsdata"] as? NSData == NSData(data: Data([11])))
+        XCTAssert(mmkv["cgfloat"] as? CGFloat == CGFloat(22.22))
+        XCTAssert(mmkv["float"] as? Float == Float(11.11))
+        XCTAssert(mmkv["double"] as? Double == Double(33.33))
     }
 }
